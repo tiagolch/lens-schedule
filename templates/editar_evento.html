@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-xl mx-auto bg-white p-8 rounded-xl shadow-sm border border-slate-200 mt-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-slate-900">Editar Evento</h2>
+        <a href="/" class="text-xs text-slate-500 hover:text-slate-800 font-medium">← Voltar à Agenda</a>
+    </div>
+
+    <form action="/eventos/{{ evento.id }}/editar" method="POST" class="space-y-4">
+        <div>
+            <label class="block text-xs font-medium text-slate-600 uppercase mb-1">Nome do Evento</label>
+            <input type="text" name="nome_evento" value="{{ evento.nome_evento }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900 outline-none">
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 uppercase mb-1">Organizador</label>
+            <select name="organizador_id" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900 outline-none">
+                {% for org in organizadores %}
+                <option value="{{ org.id }}" {% if org.id == evento.organizador_id %}selected{% endif %}>{{ org.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block text-xs font-medium text-slate-600 uppercase mb-1">Data</label>
+                <input type="date" name="data" value="{{ evento.data }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 uppercase mb-1">Horário</label>
+                <input type="text" name="horario" value="{{ evento.horario or '' }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900 outline-none">
+            </div>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-slate-600 uppercase mb-1">Local</label>
+            <input type="text" name="local" value="{{ evento.local or '' }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900 outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block text-xs font-medium text-slate-600 uppercase mb-1">Custos (€)</label>
+                <input type="number" step="0.01" name="custos" value="{{ evento.custos }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900 outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 uppercase mb-1">Vendas (€)</label>
+                <input type="number" step="0.01" name="vendas" value="{{ evento.vendas }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-slate-900 outline-none">
+            </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+            <button type="submit" class="flex-1 bg-slate-900 text-white font-medium py-2.5 rounded-lg text-sm hover:bg-slate-800 transition">Guardar Alterações</button>
+            <a href="/" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-sm text-center transition">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
