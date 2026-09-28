@@ -1,9 +1,9 @@
 import hashlib
-import os
+from datetime import date
 from models import EventoModel, OrganizadorModel, UtilizadorModel
+from sqlalchemy import extract
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from sqlalchemy import extract
 
 
 class LensAgendaService:
@@ -41,28 +41,35 @@ class LensAgendaService:
 
     @staticmethod
     def inicializar_admin_padrao(db: Session):
-        # Cria um admin por defeito ("tiago") se a tabela estiver vazia
         if db.query(UtilizadorModel).count() == 0:
             LensAgendaService.criar_utilizador(db, "tiago", "admin123")
 
     @staticmethod
-    def listar_organizadores(db: Session, utilizador: str):
-        return (
-            db.query(OrganizadorModel)
-            .filter(OrganizadorModel.utilizador == utilizador)
-            .order_by(OrganizadorModel.nome.asc())
-            .all()
+    def listar_organizadores(db: Session, utilizador_id: int, incluir_organizador_id: int = None):
+        query = db.query(OrganizadorModel).filter(
+            OrganizadorModel.utilizador_id == utilizador_id
         )
+        organizadores = query.order_by(OrganizadorModel.nome.asc()).all()
+        
+        if incluir_organizador_id:
+            ids_existentes = [o.id for o in organizadores]
+            if incluir_organizador_id not in ids_existentes:
+                org_extra = db.query(OrganizadorModel).filter(OrganizadorModel.id == incluir_organizador_id).first()
+                if org_extra:
+                    organizadores.append(org_extra)
+                    organizadores.sort(key=lambda x: x.nome.lower())
+
+        return organizadores
 
     @staticmethod
     def adicionar_organizador(
-        db: Session, utilizador: str, nome: str
+        db: Session, utilizador_id: int, nome: str
     ) -> tuple[bool, str]:
         nome_limpo = nome.strip()
         if not nome_limpo:
             return False, "O nome do organizador não pode estar vazio."
         try:
-            novo = OrganizadorModel(utilizador=utilizador, nome=nome_limpo)
+            novo = OrganizadorModel(utilizador_id=utilizador_id, nome=nome_limpo)
             db.add(novo)
             db.commit()
             return True, f"Organizador '{nome_limpo}' adicionado com sucesso!"
@@ -84,10 +91,10 @@ class LensAgendaService:
             return False, f"Erro ao registar evento: {str(e)}"
 
     @staticmethod
-    def listar_eventos_por_utilizador(db: Session, utilizador: str):
+    def listar_eventos_por_utilizador(db: Session, utilizador_id: int):
         return (
             db.query(EventoModel)
-            .filter(EventoModel.utilizador == utilizador)
+            .filter(EventoModel.utilizador_id == utilizador_id)
             .order_by(EventoModel.data.desc())
             .all()
         )
@@ -135,26 +142,24 @@ class LensAgendaService:
 
     @staticmethod
     def listar_eventos_filtrados(
-        db: Session, utilizador: str, mes: int = None, ano: int = None
+        db: Session, utilizador_id: int, mes: int = None, ano: int = None
     ):
         query = db.query(EventoModel).filter(
-            EventoModel.utilizador == utilizador)
+            EventoModel.utilizador_id == utilizador_id)
 
-        # Se ano for especificado
         if ano:
             query = query.filter(EventoModel.ano == ano)
 
-        # Se mês for especificado (1 a 12)
         if mes:
             query = query.filter(extract("month", EventoModel.data) == mes)
 
         return query.order_by(EventoModel.data.desc()).all()
 
     @staticmethod
-    def obter_anos_disponiveis(db: Session, utilizador: str):
+    def obter_anos_disponiveis(db: Session, utilizador_id: int):
         anos = (
             db.query(EventoModel.ano)
-            .filter(EventoModel.utilizador == utilizador)
+            .filter(EventoModel.utilizador_id == utilizador_id)
             .distinct()
             .order_by(EventoModel.ano.desc())
             .all()
@@ -162,17 +167,14 @@ class LensAgendaService:
         return [a[0] for a in anos]
 
     @staticmethod
-    def obter_comparativo_historico(db: Session, utilizador: str):
-        """Agrupa os eventos pelo nome para comparar edições de anos diferentes."""
+    def obter_comparativo_historico(db: Session, utilizador_id: int):
         eventos = (
             db.query(EventoModel)
-            .filter(EventoModel.utilizador == utilizador)
+            .filter(EventoModel.utilizador_id == utilizador_id)
             .all()
         )
         comparativo = {}
         for ev in eventos:
-            nome = ev.nome_evento.strip().lower()
-            # Normaliza ligeiramente o nome para agrupar edições semelhantes (ex: "Comic Con" vs "Comic Con Portugal")
             chave = ev.nome_evento.strip()
             if chave not in comparativo:
                 comparativo[chave] = []
@@ -187,10 +189,8 @@ class LensAgendaService:
                 "lucro": lucro,
             })
 
-        # Filtra apenas eventos que tenham mais do que 1 edição para poder comparar
         resultado = []
         for nome_evento, edicoes in comparativo.items():
-            # Ordena por ano descendente
             edicoes_ordenadas = sorted(
                 edicoes, key=lambda x: x["ano"], reverse=True)
             if len(edicoes_ordenadas) > 1:
