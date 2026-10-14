@@ -122,6 +122,12 @@ def read_root(
         )
     )
 
+    # Preparar dados estruturados para o Chart.js
+    grafico_labels = [ev.nome_evento for ev in eventos_financeiros]
+    grafico_vendas = [ev.vendas or 0.0 for ev in eventos_financeiros]
+    grafico_custos = [ev.custos or 0.0 for ev in eventos_financeiros]
+    grafico_lucros = [(ev.vendas or 0.0) - (ev.custos or 0.0) for ev in eventos_financeiros]
+
     organizadores = services.LensAgendaService.listar_organizadores(db, user.id)
     anos_disponiveis = services.LensAgendaService.obter_anos_disponiveis(
         db, user.id
@@ -142,6 +148,11 @@ def read_root(
             "ano_atual": ano_int if ano_int else "",
             "anos_disponiveis": anos_disponiveis,
             "comparativo_historico": comparativo_historico,
+            # Dados para o gráfico
+            "grafico_labels": grafico_labels,
+            "grafico_vendas": grafico_vendas,
+            "grafico_custos": grafico_custos,
+            "grafico_lucros": grafico_lucros,
         },
     )
 
